@@ -1445,7 +1445,11 @@
 
         //console.log('clicking: ', state, µb.userSettings.clickingAds || µb.userSettings.clickingAds
         var off = !(µb.userSettings.clickingAds || µb.userSettings.hidingAds);
-        µb.selectFilterLists({ location: 'https://www.eff.org/files/effdntlist.txt', off: off })
+        //µb.selectFilterLists({ location: 'https://www.eff.org/files/effdntlist.txt', off: off });
+        µb.selectFilterLists({ location: 'https://www.eff.org/files/effdntlist.txt', off: true });
+
+        // tmp-remove
+        µb.selectFilterLists({ location: 'https://raw.githubusercontent.com/dhowe/Miscellaneous/master/testdntlist.txt', off: off })
       }
 
       sendNotifications(notes);
