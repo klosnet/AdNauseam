@@ -66,14 +66,19 @@
   }
 
   function hasEnabledToggle() {
-    return switchValue('hidingAds') || switchValue('clickingAds') || switchValue('blockingMalware');
+
+    return switchValue('hidingAds') ||
+      switchValue('clickingAds') ||
+      switchValue('blockingMalware');
   }
 
-  function toggleNum(){
+  function toggleNum() {
+
     var toggleNum = 0;
-    if(switchValue('hidingAds')) toggleNum++;
-    if(switchValue('clickingAds')) toggleNum++;
-    if(switchValue('blockingMalware')) toggleNum++;
+
+    if (switchValue('hidingAds')) toggleNum++;
+    if (switchValue('clickingAds')) toggleNum++;
+    if (switchValue('blockingMalware')) toggleNum++;
 
     return toggleNum;
   }
@@ -84,7 +89,7 @@
     changeUserSettings("disableHidingForDNT", bool);
   }
 
-  function toggleDNTException(bool) {
+  function toggleDNTException() {
 
     var dntInput = uDom('#dnt-exception');
 
@@ -102,36 +107,38 @@
     var button = uDom('#confirm-close > button');
 
     if (hasEnabledToggle()) {
-      //remove class "disable"
+
       button.removeClass("disabled");
     }
     else {
-      //add class disable
+
       button.addClass("disabled");
     }
 
-    //change text according to toggle Numbers
+    // change text according to toggle Numbers
     switch(toggleNum()) {
+
     case 0:
         button.removeClass("toggled1");
         button.removeClass("large");
-
         button.addClass("toggled0");
         break;
+
     case 1:
         button.attr("data-i18n", "adnFirstRunThatsIt");
         button.removeClass("toggled0");
-
         button.removeClass("toggled2");
         button.addClass("large");
         button.addClass("toggled1");
         break;
+
     case 2:
         button.attr("data-i18n", "adnFirstRunBetterButStill");
         button.removeClass("toggled1");
         button.removeClass("toggled3");
         button.addClass("toggled2");
         break;
+
     case 3:
         button.attr("data-i18n", "adnFirstRunLetsGo");
         button.removeClass("toggled2");
@@ -139,9 +146,8 @@
         break;
 
     }
-    //reload the text
-    vAPI.i18n.render();
 
+    vAPI.i18n.render(); // reload the text
   }
 
   /******************************************************************************/
@@ -155,21 +161,24 @@
         .on('change', function () {
 
             if (this.getAttribute('data-setting-name') === "respectDNT") {
+
               changeDNTexceptions(this.checked);
+
             } else {
+
               changeUserSettings(
                 this.getAttribute('data-setting-name'),
                 this.checked
               );
             }
 
-            // if (!hideOrClick()) {
-            //   changeDNTexceptions(false);
-            // }
+            if (!hideOrClick()) {
+
+              changeDNTexceptions(false);
+            }
 
             toggleFirstRunButton();
-            // toggleDNTException();
-
+            toggleDNTException();
         });
     });
 
@@ -197,6 +206,7 @@
 
     toggleDNTException();
   };
+
   /******************************************************************************/
 
   uDom.onLoad(function () {
@@ -205,16 +215,17 @@
     }, onUserSettingsReceived);
 
     messager.send('adnauseam', {
-      what: 'verifyAdBlockers' },
-        function() {
-          vAPI.messaging.send(
-              'adnauseam', {
-                  what: 'getNotifications'
-              },
-              function(n) {
-                  renderNotifications(n, true);
-              });
-        });
+        what: 'verifyAdBlockers'
+      },
+      function () {
+        vAPI.messaging.send(
+          'adnauseam', {
+            what: 'getNotifications'
+          },
+          function (n) {
+            renderNotifications(n, true);
+          });
+      });
   });
 
   /******************************************************************************/

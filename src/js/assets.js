@@ -108,6 +108,7 @@ var cacheIsObsolete = function(t) {
 var cachedAssetsManager = (function() {
     var exports = {};
     var entries = null;
+    var disabled = false;
     var cachedAssetPathPrefix = 'cached_asset_content://';
 
     var getEntries = function(callback) {
@@ -175,7 +176,7 @@ var cachedAssetsManager = (function() {
             cbSuccess(details);
         };
         var onEntries = function(entries) {
-            if ( entries[path] === undefined ) {
+            if (disabled || entries[path] === undefined ) {
                 details.error = 'Error: not found';
                 cbError(details);
                 return;
@@ -192,7 +193,7 @@ var cachedAssetsManager = (function() {
             path: path,
             content: content
         };
-        if ( content === '' ) {
+        if (disabled || content === '' ) {
             exports.remove(path);
             cbSuccess(details);
             return;

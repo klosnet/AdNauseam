@@ -16,18 +16,15 @@
     lastPageLoad = 0,
     notifications = [],
     allowedExceptions = [],
+    dntDynamicFilters = [],
+    profiler = +new Date(),
     maxAttemptsPerAd = 3,
     visitTimeout = 20000,
     pollQueueInterval = 5000,
-    profiler = +new Date(),
     strictBlockingDisabled = false,
-    repeatVisitInterval = Number.MAX_VALUE,
-    previousDNTlist = [];
+    repeatVisitInterval = Number.MAX_VALUE;
 
   var xhr, idgen, admap, inspected, listEntries, firewall;
-
-  // default rules for adnauseam's firewall
-  var defaultDynamicFilters = [ ];
 
   // allow all blocks on requests to/from these domains
   var allowAnyBlockOnDomains = ['youtube.com', 'funnyordie.com'];
@@ -78,18 +75,12 @@
 
     initializeState(settings);
 
-    // setInterval(function(){
-    //     updateDNTwhitelist();
-    // }, 86400000); //every day
-
-
     setTimeout(pollQueue, pollQueueInterval * 2);
   }
 
   var initializeState = function (settings) {
 
     admap = (settings && settings.admap) || {};
-    // (firewall = new µb.Firewall()).fromString(defaultDynamicFilters.join('\n'));
 
     validateAdStorage();
 
@@ -102,6 +93,7 @@
       setupTesting();
     }
 
+    parseDntList();
   }
 
   var setupTesting = function () {
@@ -171,7 +163,7 @@
 
     computeNextId(ads);
 
-    log('[INIT] Initialized with ' + ads.length + ' ads');
+    log('[INIT] Initialized with ' + ads.length + ' ads', µb.userSettings.dntDomains.length);
 
     return ads;
   }
@@ -1090,61 +1082,82 @@
     return false;
   }
 
-  var getUpdatedDNTlist = function(callback){
-      // this function get the 'updated DNT list' assuming the local copy of it
-      // at assets/thirdparties/www.eff.org/files/effdntlist.txt gets updated regularly.
-      µb.assets.get("assets/thirdparties/www.eff.org/files/effdntlist.txt", function(d){
-          var content = d.content;
-          var DNTurls = [];
-          while(content.indexOf("@@||") != -1){
-              var start = content.indexOf("@@||");
-              var end = content.indexOf("^$", start);
-              var domain = content.substring(start+4,end);
-              DNTurls.push(domain);
-              content = content.substring(end)
-          }
-          callback(DNTurls);
-      });
+  var clearDntFilters = function () {
+
+    var dnts = µb.userSettings.dntDomains;
+
+    if (dnts && dnts.length) {
+
+      // clear the net-filtering switches
+      for (var i = 0; i < dnts.length; i++)
+        µb.toggleNetFilteringSwitch("http://" + dnts[i], "site", true);
+    }
+
+    // clear the dynamic filter rules
+    dntDynamicFilters = [];
   }
 
-  var clearOutOldDNTlist = function(callback){
-      defaultDynamicFilters = [];
-      if(previousDNTlist.length > 0){
-          for(var i = 0; i < previousDNTlist.length; i++){
-              µb.toggleNetFilteringSwitch("http://" + previousDNTlist[i], "site", true);
-          }
+  // NEXT: Finish DNT parsing on load
+  // -- Consider when clearing needs to happen
+  // -- Call toggleDntFilters when µb.userSettings.disableHidingForDNT is changed
+  // -- Add check for any ad clicks (when µb.userSettings.disableClickingForDNT is enabled)
+  // -- Re-parse DNT list whenever it is updated
+
+  var parseDntList = function (callback) {
+
+    // this function get the 'original DNT list' installed with the addon
+    µb.assets.get("assets/thirdparties/www.eff.org/files/effdntlist.txt", function (d) {
+
+      var content = d.content, dnts = [];
+
+      while (content.indexOf("@@||") != -1) {
+
+        var start = content.indexOf("@@||"),
+          end = content.indexOf("^$", start),
+          domain = content.substring(start + 4, end);
+
+        dnts.push(domain);
+        content = content.substring(end);
       }
-      callback();
-  }
 
-  var setDNTwhitelist = function(callback){
+      log('[LOAD] Parsed ' + dnts.length + ' DNT domains'); //, dnts);
 
-    clearOutOldDNTlist(function(){
-
-        getUpdatedDNTlist(function(updatedDNTlist){
-
-            for(var i = 0; i < updatedDNTlist.length; i++){
-                defaultDynamicFilters.push("* " + updatedDNTlist[i] + " * allow");
-                µb.toggleNetFilteringSwitch("http://" + updatedDNTlist[i], "site", false);
-            }
-            previousDNTlist = updatedDNTlist;
-
-            callback(); //after this dymanic filter rules will be activated
-
-        });
+      replaceDntDomains(dnts);
+      toggleDntFilters();
     });
   }
 
-  // clears old DNT lists and calls new Whitelist and dynamic filter rules into action.
-  var updateDNTwhitelist = function(){
-    setDNTwhitelist(function(){
-        // activating the dynamic filter rules that have been added to the defaultDynamicFilters array:
-        (firewall = new µb.Firewall()).fromString(defaultDynamicFilters.join('\n'));
-    });
+  var replaceDntDomains = function (domains) {
+
+    clearDntFilters(); // clear old data first whenever we reset
+
+    // store the new domain data
+    µb.userSettings.dntDomains = domains;
+    vAPI.storage.set(µb.userSettings);
   }
 
+  var toggleDntFilters = function () {
 
+    clearDntFilters(); // clear first whenever we toggle
 
+    var dnts = µb.userSettings.dntDomains;
+
+    // console.log("toggleDntFilters: "+dnts.length+", "+µb.userSettings.disableHidingForDNT);
+
+    if (dnts.length && µb.userSettings.disableHidingForDNT) {
+
+      for (var i = 0; i < dnts.length; i++) {
+
+        dntDynamicFilters.push("* " + dnts[i] + " * allow");
+        µb.toggleNetFilteringSwitch("http://" + dnts[i], "site", false);
+      }
+
+      log('[LOAD] Starting firewall with ' + dnts.length + ' rules'); //, dnts);
+
+      // TODO: use reset ? if firewall exists?
+      (firewall = new µb.Firewall()).fromString(dntDynamicFilters.join('\n'));
+    }
+  };
 
   // start by grabbing user-settings, then calling initialize()
   vAPI.storage.get(µb.userSettings, function (settings) {
@@ -1155,6 +1168,7 @@
 
       settings.admap = µb.adnSettings.admap;
       log("[IMPORT] Using legacy admap...");
+
       setTimeout(function () {
         storeUserData(true);
       }, 2000);
@@ -1235,9 +1249,12 @@
 
       listEntries = entries;
       var keys = Object.keys(entries);
+
       log("[LOAD] Compiled " + keys.length +
-        " 3rd-party lists in " + (+new Date() - profiler) + "ms");
+        " 3rd-party lists in " + (+new Date() - profiler) + "ms");//,keys);
+
       strictBlockingDisabled = true;
+
       verifyAdBlockers();
       verifySettings(); // check settings/lists
       verifyLists(µBlock.remoteBlacklists);
@@ -1245,12 +1262,15 @@
 
     if (firstRun && !isAutomated()) {
 
+      // clear any cached assets on install
+      firstRun && µb.assets.rmrf();
+
       vAPI.tabs.open({
         url: 'firstrun.html',
         index: -1
       });
 
-      // collapses 'languages' group in dashboard:3rd-party
+      // hack: collapses 'languages' group in dashboard:3rd-party
       vAPI.localStorage.setItem('collapseGroup5', 'y');
     }
   };
@@ -1385,9 +1405,8 @@
 
   exports.checkAllowedException = function (url, headers) {
 
-    if (typeof allowedExceptions[url] !== 'undefined')
-      return blockIncomingCookies(headers, url);
-    return false;
+    return (typeof allowedExceptions[url] !== 'undefined') ?
+      blockIncomingCookies(headers, url) : false;
   };
 
   var blockIncomingCookies = exports.blockIncomingCookies = function (headers, requestUrl, originalUrl) {
@@ -1420,17 +1439,21 @@
 
   exports.checkFirewall = function (context) {
 
-    firewall.evaluateCellZY(context.rootHostname, context.requestHostname, context.requestType);
+    var action, result = '';
 
-    var result = '';
-    if (firewall.mustBlockOrAllow()) {
+    if (firewall) {
 
-      result = firewall.toFilterString();
-      var action = firewall.mustBlock() ? 'BLOCK' : 'ALLOW';
+      firewall.evaluateCellZY(context.rootHostname, context.requestHostname, context.requestType);
 
-      logNetEvent('[' + action + ']', ['Firewall', ' ' + context.rootHostname + ' => ' +
-        context.requestHostname, '(' + context.requestType + ') ', context.requestURL
-      ]);
+      if (firewall.mustBlockOrAllow()) {
+
+        result = firewall.toFilterString();
+        action = firewall.mustBlock() ? 'BLOCK' : 'ALLOW';
+
+        logNetEvent('[' + action + ']', ['Firewall', ' ' + context.rootHostname + ' => ' +
+          context.requestHostname, '(' + context.requestType + ') ', context.requestURL
+        ]);
+      }
     }
 
     return result;
