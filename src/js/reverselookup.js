@@ -102,6 +102,7 @@ var initWorker = function(callback) {
     var µb = µBlock;
     var path, entry;
 
+
     for ( path in µb.remoteBlacklists ) {
         if ( µb.remoteBlacklists.hasOwnProperty(path) === false ) {
             continue;
@@ -121,6 +122,8 @@ var initWorker = function(callback) {
         callback();
         return;
     }
+
+    //console.log('µb.remoteBlacklists.entries:', entries);
 
     for ( path in entries ) {
         µb.getCompiledFilterList(path, onListLoaded);

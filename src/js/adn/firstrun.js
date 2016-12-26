@@ -160,25 +160,21 @@
       uNode.prop('checked', details[uNode.attr('data-setting-name')] === true)
         .on('change', function () {
 
-            if (this.getAttribute('data-setting-name') === "respectDNT") {
+          if (this.getAttribute('data-setting-name') === "respectDNT") {
+            changeDNTexceptions(this.checked);
+          } else {
+            changeUserSettings(
+              this.getAttribute('data-setting-name'),
+              this.checked
+            );
+          }
 
-              changeDNTexceptions(this.checked);
+          if (!hideOrClick()) {
+            changeDNTexceptions(false);
+          }
 
-            } else {
-
-              changeUserSettings(
-                this.getAttribute('data-setting-name'),
-                this.checked
-              );
-            }
-
-            if (!hideOrClick()) {
-
-              changeDNTexceptions(false);
-            }
-
-            toggleFirstRunButton();
-            toggleDNTException();
+          toggleFirstRunButton();
+          toggleDNTException();
         });
     });
 
@@ -210,6 +206,7 @@
   /******************************************************************************/
 
   uDom.onLoad(function () {
+
     messager.send('dashboard', {
       what: 'userSettings'
     }, onUserSettingsReceived);

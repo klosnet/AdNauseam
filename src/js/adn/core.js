@@ -22,9 +22,11 @@
     visitTimeout = 20000,
     pollQueueInterval = 5000,
     strictBlockingDisabled = false,
-    repeatVisitInterval = Number.MAX_VALUE;
+    reSpecialChars = /[\*\^\t\v\n]/,
+    repeatVisitInterval = Number.MAX_VALUE,
+    dntListUrl = 'https://www.eff.org/files/effdntlist.txt';
 
-  var xhr, idgen, admap, inspected, listEntries, firewall;
+  var xhr, idgen, admap, inspected, listEntries, dntFirewall;
 
   // allow all blocks on requests to/from these domains
   var allowAnyBlockOnDomains = ['youtube.com', 'funnyordie.com'];
@@ -54,8 +56,6 @@
 
   // mark ad visits as failure if any of these are included in title
   var errorStrings = ['file not found', 'website is currently unavailable'];
-
-  var reSpecialChars = /[\*\^\t\v\n]/;
 
   /**************************** functions ******************************/
 
@@ -93,7 +93,7 @@
       setupTesting();
     }
 
-    parseDntList();
+    dntFirewall = new µb.Firewall();
   }
 
   var setupTesting = function () {
@@ -981,7 +981,7 @@
   };
 
   /**
-   *  NOTE: this is called AFTER our firewall rules, and checks the following:
+   *  NOTE: this is called AFTER our dntFirewall rules, and checks the following:
    *  1) whether we are blocking at all
    *  		if not, return false
    *  2) whether domain is blockable (allowAnyBlockOnDomains)
@@ -1082,7 +1082,7 @@
     return false;
   }
 
-  var clearDntFilters = function () {
+  var clearFiltersDNT = function () {
 
     var dnts = µb.userSettings.dntDomains;
 
@@ -1095,69 +1095,10 @@
 
     // clear the dynamic filter rules
     dntDynamicFilters = [];
+
+    // reset the dntFirewall
+    dntFirewall.reset();
   }
-
-  // NEXT: Finish DNT parsing on load
-  // -- Consider when clearing needs to happen
-  // -- Call toggleDntFilters when µb.userSettings.disableHidingForDNT is changed
-  // -- Add check for any ad clicks (when µb.userSettings.disableClickingForDNT is enabled)
-  // -- Re-parse DNT list whenever it is updated
-
-  var parseDntList = function (callback) {
-
-    // this function get the 'original DNT list' installed with the addon
-    µb.assets.get("assets/thirdparties/www.eff.org/files/effdntlist.txt", function (d) {
-
-      var content = d.content, dnts = [];
-
-      while (content.indexOf("@@||") != -1) {
-
-        var start = content.indexOf("@@||"),
-          end = content.indexOf("^$", start),
-          domain = content.substring(start + 4, end);
-
-        dnts.push(domain);
-        content = content.substring(end);
-      }
-
-      log('[LOAD] Parsed ' + dnts.length + ' DNT domains'); //, dnts);
-
-      replaceDntDomains(dnts);
-      toggleDntFilters();
-    });
-  }
-
-  var replaceDntDomains = function (domains) {
-
-    clearDntFilters(); // clear old data first whenever we reset
-
-    // store the new domain data
-    µb.userSettings.dntDomains = domains;
-    vAPI.storage.set(µb.userSettings);
-  }
-
-  var toggleDntFilters = function () {
-
-    clearDntFilters(); // clear first whenever we toggle
-
-    var dnts = µb.userSettings.dntDomains;
-
-    // console.log("toggleDntFilters: "+dnts.length+", "+µb.userSettings.disableHidingForDNT);
-
-    if (dnts.length && µb.userSettings.disableHidingForDNT) {
-
-      for (var i = 0; i < dnts.length; i++) {
-
-        dntDynamicFilters.push("* " + dnts[i] + " * allow");
-        µb.toggleNetFilteringSwitch("http://" + dnts[i], "site", false);
-      }
-
-      log('[LOAD] Starting firewall with ' + dnts.length + ' rules'); //, dnts);
-
-      // TODO: use reset ? if firewall exists?
-      (firewall = new µb.Firewall()).fromString(dntDynamicFilters.join('\n'));
-    }
-  };
 
   // start by grabbing user-settings, then calling initialize()
   vAPI.storage.get(µb.userSettings, function (settings) {
@@ -1223,6 +1164,98 @@
       // close whitelist if open (see gh #113)
       var wlId = getExtPageTabId("dashboard.html#whitelist.html")
       wlId && vAPI.tabs.replace(wlId, vAPI.getURL("dashboard.html"));
+    }
+  };
+
+  // NEXT: Finish DNT parsing on load
+  // -- Consider when clearing needs to happen
+  // -- Call toggleDntFilters when µb.userSettings.disableHidingForDNT is changed
+  // -- Add check for any ad clicks (when µb.userSettings.disableClickingForDNT is enabled)
+  // -- Re-parse DNT list whenever it is updated
+
+  exports.processEntriesDNT = function (content) {
+
+    // this function get the 'original DNT list' installed with the addon
+    //µb.assets.get("assets/thirdparties/www.eff.org/files/effdntlist.txt", function (d) {
+    var domains = [];
+
+    while (content.indexOf("@@||") != -1) {
+
+      var start = content.indexOf("@@||"),
+        end = content.indexOf("^$", start),
+        domain = content.substring(start + 4, end);
+
+      domains.push(domain);
+      content = content.substring(end);
+    }
+
+    //log('[DNT] Parsed ' + domains.length + ' domains'); //, dntDomains);
+
+     var current = µb.userSettings.dntDomains,
+      needsUpdate = current.length != domains.length;
+
+    if (!needsUpdate) {
+
+      current.sort();
+      domains.sort();
+      for (var i = 0; i < domains.length; ++i) {
+        if (domains[i] !== current[i]) {
+          needsUpdate = true;
+          break;
+        }
+      }
+    }
+
+    if (needsUpdate) { // data has changed
+
+      console.log("[DNT] Updated domains: ", domains);
+      clearFiltersDNT(); // clear old data first before resetting
+
+      µb.userSettings.dntDomains = domains; // store domain data
+      vAPI.storage.set(µb.userSettings);
+
+      updateFiltersDNT();
+    }
+    else
+      console.log("[DNT] No new domains, ignoring...");
+  }
+
+  exports.isDoNotTrackUrl = function (url) {
+
+    return (url === dntListUrl);
+  }
+
+  var dntEnabled = function () {
+
+    return µb.userSettings.disableHidingForDNT || µb.userSettings.disableClickingForDNT;
+  }
+
+  var updateFiltersDNT = exports.updateFiltersDNT = function () {
+
+    console.log(dntFirewall);
+
+    clearFiltersDNT(); // clear first whenever we toggle
+
+    var dnts = µb.userSettings.dntDomains;
+
+    if (dnts.length && dntEnabled()) {
+
+      console.log("[DNT] Enabling "+dnts.length+" net filters");
+
+      for (var i = 0; i < dnts.length; i++) {
+
+        dntDynamicFilters.push("* " + dnts[i] + " * allow");
+        µb.toggleNetFilteringSwitch("http://" + dnts[i], "site", false);
+      }
+
+      // TODO: use reset ? if dntFirewall exists?
+      dntFirewall.fromString(dntDynamicFilters.join('\n'), false);
+
+      log('[DNT] Loaded firewall with ' + dnts.length + ' dynamic rules');
+    }
+    else {
+
+      console.log("[DNT] Disabling DNT...");
     }
   };
 
@@ -1434,26 +1467,23 @@
 
   exports.shutdown = function () {
 
-    firewall.reset();
+    dntFirewall.reset();
   };
 
   exports.checkFirewall = function (context) {
 
     var action, result = '';
 
-    if (firewall) {
+    dntFirewall.evaluateCellZY(context.rootHostname, context.requestHostname, context.requestType);
 
-      firewall.evaluateCellZY(context.rootHostname, context.requestHostname, context.requestType);
+    if (dntFirewall.mustBlockOrAllow()) {
 
-      if (firewall.mustBlockOrAllow()) {
+      result = dntFirewall.toFilterString();
+      action = dntFirewall.mustBlock() ? 'BLOCK' : 'ALLOW';
 
-        result = firewall.toFilterString();
-        action = firewall.mustBlock() ? 'BLOCK' : 'ALLOW';
-
-        logNetEvent('[' + action + ']', ['Firewall', ' ' + context.rootHostname + ' => ' +
-          context.requestHostname, '(' + context.requestType + ') ', context.requestURL
-        ]);
-      }
+      logNetEvent('[' + action + ']', ['Firewall', ' ' + context.rootHostname + ' => ' +
+        context.requestHostname, '(' + context.requestType + ') ', context.requestURL
+      ]);
     }
 
     return result;
@@ -1618,7 +1648,7 @@
 
         //console.log('clicking: ', state, µb.userSettings.clickingAds || µb.userSettings.clickingAds
         var off = !(µb.userSettings.clickingAds || µb.userSettings.hidingAds);
-        µb.selectFilterLists({ location: 'https://www.eff.org/files/effdntlist.txt', off: off })
+        µb.selectFilterLists({ location: exports.DNT, off: off })
       }
 
       sendNotifications(notes);

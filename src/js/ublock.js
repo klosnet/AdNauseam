@@ -240,7 +240,7 @@ var matchWhitelistDirective = function(url, hostname, directive) {
 
     var us = this.userSettings, adn = µBlock.adnauseam;
 
-    //console.log('changeUserSettings', name, value, us);
+    console.log('changeUserSettings', name, value, us);
 
     // Return all settings if none specified.
     if ( name === undefined ) {
@@ -332,6 +332,12 @@ var matchWhitelistDirective = function(url, hostname, directive) {
         break;
     case 'blockingMalware':
         adn.verifySetting(BlockingDisabled, !us.blockingMalware);
+        break;
+    case 'disableHidingForDNT':
+        adn.updateFiltersDNT();
+        break;
+    case 'disableClickingForDNT':
+        adn.updateFiltersDNT();
         break;
     case 'noThirdPartyCookies':
         //vAPI.browserSettings.set({ 'thirdPartyCookiesAllowed': !value });

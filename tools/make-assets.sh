@@ -33,15 +33,7 @@ mkdir $DES/ublock
 cp -R ../uAssets/filters/*                                       $DES/ublock/
 cp -R ./assets/ublock/filter-lists.json                          $DES/ublock/
 
-# comment out when moved adnauseam.txt to uAssets
-# cp assets/ublock/adnauseam.txt                                   $DES/ublock/   # adn
-
 cp ../uAssets/checksums/ublock0.txt                              $DES/checksums.txt
-
-# append our checksum to the uBlock checksum list
-# cat assets/checksum-adn.txt >> $DES/checksums.txt
-
-#cp $DES/checksums.txt ./assets/checksums/ublock0.txt  # for checking in adn repo
 
 echo "done."
 

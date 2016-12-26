@@ -53,7 +53,6 @@ var oneDay = 24 * oneHour;
 /******************************************************************************/
 
 var projectRepositoryRoot = µBlock.projectServerRoot;
-var adnauseamListPath = 'assets/ublock/adnauseam.txt';
 var assetsRepositoryRoot = 'https://raw.githubusercontent.com/dhowe/uAssets/master/'; // ADN
 var nullFunc = function() {};
 var reIsExternalPath = /^(file|ftps?|https?|resource):\/\//;
@@ -108,7 +107,7 @@ var cacheIsObsolete = function(t) {
 var cachedAssetsManager = (function() {
     var exports = {};
     var entries = null;
-    var disabled = false;
+    var disabled = false; // ADN: for testing
     var cachedAssetPathPrefix = 'cached_asset_content://';
 
     var getEntries = function(callback) {
@@ -326,7 +325,10 @@ var toRepoURL = function(path) {
 /******************************************************************************/
 
 var getTextFileFromURL = function(url, onLoad, onError) {
-    // console.log('µBlock.assets/getTextFileFromURL("%s"):', url);
+
+if (url === µBlock.adnauseam.DNT) {
+  console.log('µBlock.assets/getTextFileFromURL: ', url, onLoad);
+}
 
     if ( typeof onError !== 'function' ) {
         onError = onLoad;
@@ -980,7 +982,14 @@ var readExternalAsset = function(path, callback) {
             onExternalFileError();
             return;
         }
+
         //console.log('µBlock> readExternalAsset("%s") / onExternalFileLoaded1()', path);
+
+        // If we've loaded a DNT list, we need to parse it
+        if (µBlock.adnauseam.isDoNotTrackUrl(path)) { // ADN
+          µBlock.adnauseam.processEntriesDNT(this.responseText);
+        }
+
         cachedAssetsManager.save(path, this.responseText);
         reportBack(this.responseText);
     };
@@ -1109,13 +1118,6 @@ exports.get = function(path, callback) {
 
     var onRepoMetaReady = function(meta) {
         var assetEntry = meta.entries[path];
-
-        // ADN: fix for #258 (no longer needed)
-        // if ( assetEntry === undefined && path === adnauseamListPath) {
-        //     //console.log('Creating new ADN asset: '+adnauseamListPath);
-        //     assetEntry= new AssetEntry();
-        //     meta.entries[path] = assetEntry;
-        // }
 
         // Asset doesn't exist
         if ( assetEntry === undefined ) {
