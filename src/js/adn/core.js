@@ -428,7 +428,7 @@
           }, 600); // back to normal icon
         }
         else {
-          warn('Null tab in click animation: ', tab);
+          // warn('Null tab in click animation: ', tab);
         }
       });
 
