@@ -2242,6 +2242,12 @@ var httpObserver = {
         // revised this eventually.
         var responseHeaders = [],
             value = channel.contentLength;
+
+        // ADN: in case we have any cookies to deal with
+        channel.visitResponseHeaders(function(name, value) {
+            responseHeaders.push({ name: name, value: value });
+        });
+
         if ( value !== -1 ) {
             responseHeaders.push({ name: 'Content-Length', value: value });
         }
@@ -2272,14 +2278,14 @@ var httpObserver = {
             return;
         }
 
-        // ADN: (ugly-hack-for-firefox) we only deal with cookies here
+        // ADN: (ugly-hack-for-firefox) we only deal with incoming cookies here
         // and just ignore whatever is returned from onHeadersReceived()
-        if (µBlock.userSettings.noIncomingCookies &&
+        /*if (µBlock.userSettings.noIncomingCookies &&
           µBlock.adnauseam.lookupAd(URI.asciiSpec, requestId))
         {
             //console.log('Blocking COOKIE',URI.asciiSpec);
             channel.setResponseHeader('Set-Cookie', '', false);
-        }
+        }*/
 
         if ( result.responseHeaders && result.responseHeaders.length ) {
             channel.setResponseHeader(
