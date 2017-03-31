@@ -1458,7 +1458,7 @@
   var markUserAction = exports.markUserAction = function () {
 
     return (lastUserActivity = millis());
-  }
+  };
 
   var logNetAllow = exports.logNetAllow = function () {
 
