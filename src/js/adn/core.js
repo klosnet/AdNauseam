@@ -17,6 +17,7 @@
     lastUserActivity = 0,
     listsLoaded = false,
     notifications = [],
+    currentHeaders = {},
     allowedExceptions = [],
     maxAttemptsPerAd = 3,
     visitTimeout = 20000,
@@ -1354,6 +1355,18 @@
   /********************************** API *************************************/
 
   var exports = { log: log };
+
+  exports.headerStore = function (type, headers) {
+
+    if (!type) err('type is required argument');
+
+    if (!headers || !headers.length) { // get
+
+      return currentHeaders[type];
+    }
+
+    currentHeaders[type] = headers; // set
+  };
 
   exports.adsForVault = function (request, pageStore, tabId) {
 

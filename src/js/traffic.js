@@ -39,12 +39,73 @@ var exports = {};
 
 /********************************* ADN ****************************************/
 
-// Called before each outgoing request (ADN:)
+var headerIndex = function (headers, name) { // ignores case
+
+  name = name.toLowerCase();
+
+  for (var i = headers.length - 1; i >= 0; i--) {
+
+    dbug && console.log(i + ") " + headers[i].name, headers[i].value);
+    if (name === headers[i].name.toLowerCase())
+      return i;
+  }
+
+  return -1;
+}
+
+/*
+  Called before each outgoing request (ADN:)
+  If its an ADN request, create a header set from the latest map,
+      after setting host and possibly referer
+  If its a main-frame request, store the headers
+  If its a non-ADN xhr request, do nothing
+
+  --------------------------------------------------------------------
+  if (stripReferer) {   // handle referer for outgoing requests
+    if (details.type !== 'main_frame') { // ?
+      // remove referer from all requests in subframes
+      var refererIdx = headerIndex(headers, 'referer');
+      adn.logNetEvent('[REFERER]', 'Strip', headers[refererIdx], url);
+      setHeader(headers[refererIdx], '');
+    }
+  }
+*/
 var onBeforeSendHeaders = function (details) {
 
-  var headers = details.requestHeaders, prefs = µBlock.userSettings, adn = µBlock.adnauseam;
+  var headers = details.requestHeaders,
+    prefs = µBlock.userSettings,
+    adn = µBlock.adnauseam;
 
-  // if clicking/hiding is enabled with DNT, then send the DNT header
+  // add host and referer header to stored set of headers
+  var beforeAdVisit = function (details, headers, prefs, ad, adn) {
+
+    var hostIdx = headerIndex(headers, 'host');
+    var refIdx = headerIndex(headers, 'referer');
+
+    headers = []; // clear the headers
+
+    if (hostIdx > -1) // reset host
+      addHeader(headers, 'host', µb.URI.hostnameFromURI(ad.pageUrl);
+
+    if (refIdx > -1) // reset referer
+      addHeader(headers, 'referer' ad.pageUrl);
+
+    var stored = adn.headerStore(details.type); // use the reset
+
+    // add each header from our store
+    for (var i = stored.length - 1; i >= 0; i--) {
+      var name = stored[i].name.toLowerCase()
+      if (name !== 'host' && name !== 'referer')
+        addHeader(stored[i].name, stored[i].value);
+    }
+
+    // set the ads outgoing requestId
+    ad.requestId = details.requestId; // ??
+  };
+
+  var appendDNT = function (details, headers, prefs, adn) {
+
+  // If clicking/hiding is enabled with DNT, then append the DNT header
   if ((prefs.clickingAds && prefs.disableClickingForDNT) || (prefs.hidingAds && prefs.disableHidingForDNT)) {
 
     var pageStore = µBlock.mustPageStoreFromTabId(details.tabId);
@@ -52,7 +113,7 @@ var onBeforeSendHeaders = function (details) {
     // add it only if the browser is not sending it already
     if (pageStore.getNetFilteringSwitch() && !hasDNT(headers)) {
 
-      if (false && details.type === 'main_frame') // minimize logging
+      if (details.type === 'main_frame') // minimize logging
         adn.logNetEvent('[HEADER]', 'Append', 'DNT:1', details.url);
 
       addHeader(headers, 'DNT', '1');
@@ -65,69 +126,23 @@ var onBeforeSendHeaders = function (details) {
     // If so, is it one of our Ad visits ?
     var ad = adn.lookupAd(details.url, details.requestId);
 
-    // if so, handle the headers (cookies, ua, referer)
-    ad && beforeAdVisit(details, headers, prefs, ad);
+    // if so, handle the headers, otherwise just return them
+    ad && beforeAdVisit(details, headers, prefs, ad, adn);
+
+    return { requestHeaders: headers };
   }
 
-  // ADN: if this was an adn-allowed request, do we block cookies, etc.? TODO
+  // Store the new headers for this type
+  adn.headerStore(details.type, headers);
+
+  appendDNT(details, headers, prefs, ad, adn);
 
   return { requestHeaders: headers };
 };
 
-// ADN: remove outgoing cookies, reset user-agent, strip referer
-var beforeAdVisit = function (details, headers, prefs, ad) {
 
-  var referer = ad.pageUrl, refererIdx = -1, uirIdx = -1, dbug = 0;
 
-  ad.requestId = details.requestId; // needed?
-
-  dbug && console.log('[HEADERS] (Outgoing'+(ad.targetUrl===details.url ? ')' : '-redirect)'), details.url);
-
-  for (var i = headers.length - 1; i >= 0; i--) {
-
-    dbug && console.log(i + ") " + headers[i].name, headers[i].value);
-    var name = headers[i].name.toLowerCase();
-
-    if ((name === 'http_x_requested_with') ||
-      (name === 'x-devtools-emulate-network-conditions-client-id') ||
-      (prefs.noOutgoingCookies && name === 'cookie') ||
-      (prefs.noOutgoingUserAgent && name === 'user-agent'))
-    {
-      setHeader(headers[i], '');
-
-      // Block outgoing cookies and user-agent here if specified
-      if (prefs.noOutgoingCookies && name === 'cookie') {
-
-        µBlock.adnauseam.logNetEvent('[COOKIE]', 'Strip', headers[i].value, details.url);
-      }
-
-      // Replace user-agent with most common string, if specified
-      if (prefs.noOutgoingUserAgent && name === 'user-agent') {
-
-         headers[i].value = CommonUserAgent;
-         µBlock.adnauseam.logNetEvent('[UAGENT]', 'Default', headers[i].value, details.url);
-      }
-    }
-
-    if (name === 'referer') refererIdx = i;
-
-    if (vAPI.chrome && name === 'upgrade-insecure-requests') uirIdx = i;
-
-    if (name === 'accept') { // Set browser-specific accept header
-      setHeader(headers[i], vAPI.firefox ? AcceptHeaders.firefox : AcceptHeaders.chrome);
-    }
-  }
-
-  if (vAPI.chrome && uirIdx < 0) { // Add UIR header if chrome
-    addHeader(headers, 'Upgrade-Insecure-Requests', '1');
-  }
-
-  if (((prefs.clickingAds && prefs.disableClickingForDNT) || (prefs.hidingAds && prefs.disableHidingForDNT)) && !hasDNT(headers))
-    addHeader(headers, 'DNT', '1');
-
-  handleRefererForVisit(prefs, refererIdx, referer, details.url, headers);
-};
-
+/*
 var handleRefererForVisit = function (prefs, refIdx, referer, url, headers) {
 
   // console.log('handleRefererForVisit()', arguments);
@@ -148,7 +163,7 @@ var handleRefererForVisit = function (prefs, refIdx, referer, url, headers) {
     µBlock.adnauseam.logNetEvent('[REFERER]', 'Allow', referer, url);
     addHeader(headers, 'Referer', referer);
   }
-};
+};*/
 
 function dumpHeaders(headers) {
 
@@ -161,7 +176,7 @@ function dumpHeaders(headers) {
 
 var setHeader = function (header, value) {
 
-  if (header) header.value = value;
+  if (header)  header.value = value;
 };
 
 var addHeader = function (headers, name, value) {
@@ -585,7 +600,7 @@ var onHeadersReceived = function (details) {
 
       // don't return an empty headers array
       return details.responseHeaders.length ?
-        { 'responseHeaders': details.responseHeaders } : null;
+        { responseHeaders: details.responseHeaders } : null;
     }
 
     // ADN: check if this was an allowed exception and, if so, block cookies
