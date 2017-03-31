@@ -1356,18 +1356,6 @@
 
   var exports = { log: log };
 
-  exports.headerStore = function (type, headers) {
-
-    if (!type) err('type is required argument');
-
-    if (!headers || !headers.length) { // get
-
-      return currentHeaders[type];
-    }
-
-    currentHeaders[type] = headers; // set
-  };
-
   exports.adsForVault = function (request, pageStore, tabId) {
 
     return adsForUI();
@@ -1505,17 +1493,12 @@
 
   exports.lookupAd = function (url, requestId) {
 
-    //url = trimChar(url, '/'); // no trailing slash
-
     var ads = adlist();
-
     for (var i = 0; i < ads.length; i++) {
-
       if (ads[i].attemptedTs) {
         //console.log('check: '+ads[i].requestId+'/'+ads[i].targetUrl+' ?= '+requestId+'/'+url);
-        if (ads[i].requestId === requestId || ads[i].targetUrl === url) {
+        if (ads[i].requestId === requestId || ads[i].targetUrl === url)
           return ads[i];
-        }
       }
     }
   };

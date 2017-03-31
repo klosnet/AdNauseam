@@ -29,34 +29,14 @@
 
 /******************************************************************************/
 
-var AcceptHeaders = {
-    chrome: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-    firefox: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
-};
-var CommonUserAgent = 'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.85 Safari/537.36';
-
 var exports = {};
 
 /********************************* ADN ****************************************/
 
-var headerIndex = function (headers, name) { // ignores case
-
-  name = name.toLowerCase();
-
-  for (var i = headers.length - 1; i >= 0; i--) {
-
-    dbug && console.log(i + ") " + headers[i].name, headers[i].value);
-    if (name === headers[i].name.toLowerCase())
-      return i;
-  }
-
-  return -1;
-}
-
 /*
-  Called before each outgoing request (ADN:)
-  If its an ADN request, create a header set from the latest map,
-      after setting host and possibly referer
+  Called before each outgoing request
+  If its an ADN request, use stored headers,
+      after re-setting host and referer (?)
   If its a main-frame request, store the headers
   If its a non-ADN xhr request, do nothing
 
@@ -64,7 +44,6 @@ var headerIndex = function (headers, name) { // ignores case
   if (stripReferer) {   // handle referer for outgoing requests
     if (details.type !== 'main_frame') { // ?
       // remove referer from all requests in subframes
-      var refererIdx = headerIndex(headers, 'referer');
       adn.logNetEvent('[REFERER]', 'Strip', headers[refererIdx], url);
       setHeader(headers[refererIdx], '');
     }
@@ -79,24 +58,27 @@ var onBeforeSendHeaders = function (details) {
   // add host and referer header to stored set of headers
   var beforeAdVisit = function (details, headers, prefs, ad, adn) {
 
-    var hostIdx = headerIndex(headers, 'host');
-    var refIdx = headerIndex(headers, 'referer');
+    var hostIdx = headerIndexFromName('host', headers),
+      refIdx = headerIndexFromName('referer', headers);
 
     headers = []; // clear the headers
 
     if (hostIdx > -1) // reset host
-      addHeader(headers, 'host', µb.URI.hostnameFromURI(ad.pageUrl);
+      addHeader(headers, 'host', µb.URI.hostnameFromURI(ad.pageUrl));
 
     if (refIdx > -1) // reset referer
-      addHeader(headers, 'referer' ad.pageUrl);
+      addHeader(headers, 'referer', ad.pageUrl);
 
-    var stored = adn.headerStore(details.type); // use the reset
+    var stored = prefs.headers; // fetch the stored data
+
+    adn.logNetEvent('[HEADER]', 'Fetch', stored);
 
     // add each header from our store
     for (var i = stored.length - 1; i >= 0; i--) {
+
       var name = stored[i].name.toLowerCase()
       if (name !== 'host' && name !== 'referer')
-        addHeader(stored[i].name, stored[i].value);
+        addHeader(headers, stored[i].name, stored[i].value);
     }
 
     // set the ads outgoing requestId
@@ -105,42 +87,44 @@ var onBeforeSendHeaders = function (details) {
 
   var appendDNT = function (details, headers, prefs, adn) {
 
-  // If clicking/hiding is enabled with DNT, then append the DNT header
-  if ((prefs.clickingAds && prefs.disableClickingForDNT) || (prefs.hidingAds && prefs.disableHidingForDNT)) {
+    // If clicking/hiding is enabled with DNT, then append the DNT header
+    if ((prefs.clickingAds && prefs.disableClickingForDNT) || (prefs.hidingAds && prefs.disableHidingForDNT)) {
 
-    var pageStore = µBlock.mustPageStoreFromTabId(details.tabId);
+      var pageStore = µBlock.mustPageStoreFromTabId(details.tabId);
 
-    // add it only if the browser is not sending it already
-    if (pageStore.getNetFilteringSwitch() && !hasDNT(headers)) {
+      // add it only if the browser is not sending it already
+      if (pageStore.getNetFilteringSwitch() && !hasDNT(headers)) {
 
-      if (details.type === 'main_frame') // minimize logging
-        adn.logNetEvent('[HEADER]', 'Append', 'DNT:1', details.url);
+        if (details.type === 'main_frame') // minimize logging
+          adn.logNetEvent('[HEADER]', 'Append', 'DNT:1', details.url);
 
-      addHeader(headers, 'DNT', '1');
+        addHeader(headers, 'DNT', '1');
+      }
+    }
+  };
+
+  // is this an XMLHttpRequest(xhr) ?
+  if (vAPI.isBehindTheSceneTabId(details.tabId)) {
+
+    // if so, is it one of our Ad visits ?
+    var ad = adn.lookupAd(details.url, details.requestId);
+
+    // if so, handle the headers, otherwise leave it be
+    ad && beforeAdVisit(details, headers, prefs, ad, adn);
+
+  } else { // not an xhr
+
+    appendDNT(details, headers, prefs, adn);
+
+    // store the new headers for this type
+    if (details.type === 'main_frame') {
+      adn.logNetEvent('[HEADER]', 'Store', headers);
+      prefs.headers = headers;
     }
   }
 
-  // Is this an XMLHttpRequest ?
-  if (vAPI.isBehindTheSceneTabId(details.tabId)) {
-
-    // If so, is it one of our Ad visits ?
-    var ad = adn.lookupAd(details.url, details.requestId);
-
-    // if so, handle the headers, otherwise just return them
-    ad && beforeAdVisit(details, headers, prefs, ad, adn);
-
-    return { requestHeaders: headers };
-  }
-
-  // Store the new headers for this type
-  adn.headerStore(details.type, headers);
-
-  appendDNT(details, headers, prefs, ad, adn);
-
   return { requestHeaders: headers };
 };
-
-
 
 /*
 var handleRefererForVisit = function (prefs, refIdx, referer, url, headers) {
@@ -576,7 +560,8 @@ var onHeadersReceived = function (details) {
 //console.log('traffic.onHeadersReceived',details);
 
     var µb = µBlock, ad, result, tabId = details.tabId, requestType = details.type, dbug = 0;
-    //ADN
+
+    // ADN: we block cookies here if it was an adn-request, or an adn-allowed-request
 
     if (vAPI.isBehindTheSceneTabId(tabId)) {
 
@@ -592,10 +577,7 @@ var onHeadersReceived = function (details) {
             // this is an ADN request
             µBlock.adnauseam.blockIncomingCookies(details.responseHeaders, details.url, ad.targetUrl);
           }
-          else if (dbug && vAPI.chrome) {
-
-            console.log('Ignoring non-ADN response', requestType, details.url);
-          }
+          //else console.log('Ignoring non-ADN response', requestType, details.url);
       }
 
       // don't return an empty headers array
@@ -603,15 +585,15 @@ var onHeadersReceived = function (details) {
         { responseHeaders: details.responseHeaders } : null;
     }
 
-    // ADN: check if this was an allowed exception and, if so, block cookies
-    var  modified = pageStore && µBlock.adnauseam.checkAllowedException
-        (details.responseHeaders, details.url, pageStore.rawURL);
+    // OLD: check if this was an allowed exception and, if so, block cookies
+    //var modified = pageStore && µBlock.adnauseam.checkAllowedException
+        //(details.responseHeaders, details.url, pageStore.rawURL);
 
     if (requestType === 'main_frame') {
       µb.tabContextManager.push(tabId, details.url);
     }
 
-     var pageStore = µb.pageStoreFromTabId(tabId);
+    var pageStore = µb.pageStoreFromTabId(tabId);
     if ( pageStore === null ) {
         if ( requestType !== 'main_frame' ) { return; }
         pageStore = µb.bindTabToPageStats(tabId, 'beforeRequest');
@@ -630,10 +612,10 @@ var onHeadersReceived = function (details) {
         result = processCSP(pageStore, details);
     }
 
-    if (!result) { // ADN
+    if (!result) { // ADN, we're not blocked by some other policy
 
-      // ADN: check if this was an allowed exception and, if so, block cookies
-      var pageStore = µBlock.pageStoreFromTabId(details.tabId),
+      // so check if this was an allowed exception and, if so, block cookies
+      var pageStore = µb.pageStoreFromTabId(details.tabId),
           modified = pageStore && µBlock.adnauseam.checkAllowedException
               (details.responseHeaders, details.url, pageStore.rawURL);
 
