@@ -67,12 +67,12 @@
     return switchValue('hidingAds') || switchValue('clickingAds') || switchValue('blockingMalware');
   }
 
-  function toggleNum(){
-    var toggleNum = 0;
-    if(switchValue('hidingAds')) toggleNum++;
-    if(switchValue('clickingAds')) toggleNum++;
-    if(switchValue('blockingMalware')) toggleNum++;
+  function toggleNum() {
 
+    var toggleNum = 1;
+    if (switchValue('hidingAds')) toggleNum++;
+    if (switchValue('clickingAds')) toggleNum++;
+    if (switchValue('blockingMalware')) toggleNum++;
     return toggleNum;
   }
 
@@ -100,43 +100,41 @@
     var button = uDom('#confirm-close > button');
 
     if (hasEnabledToggle()) {
-      //remove class "disable"
+      // remove class "disable"
       button.removeClass("disabled");
-    } 
-    else {
-      //add class disable
+    } else {
+      // add class disable
       button.addClass("disabled");
     }
-    
-    //hide all
+
+    // hide all
     uDom('#confirm-close button span').css("display", "none");
 
-    //change text according to toggle Numbers
-    switch(toggleNum()) {
+    // change text according to toggle Numbers
+    switch (toggleNum()) {
     case 0:
-        button.removeClass("toggled1");
-        button.removeClass("large");
-
-        button.addClass("toggled0");
-        break;
-    case 1: 
-        uDom('span[data-i18n="adnFirstRunThatsIt"]').css("display", "inline-block");
-        button.removeClass("toggled0");
-        button.removeClass("toggled2");
-        button.addClass("large");
-        button.addClass("toggled1");
-        break;
+      button.removeClass("toggled1");
+      button.removeClass("large");
+      button.addClass("toggled0");
+      break;
+    case 1:
+      uDom('span[data-i18n="adnFirstRunThatsIt"]').css("display", "inline-block");
+      button.removeClass("toggled0");
+      button.removeClass("toggled2");
+      button.addClass("large");
+      button.addClass("toggled1");
+      break;
     case 2:
-        uDom('span[data-i18n="adnFirstRunBetterButStill"]').css("display", "inline-block");
-        button.removeClass("toggled1");
-        button.removeClass("toggled3");
-        button.addClass("toggled2");
-        break;
+      uDom('span[data-i18n="adnFirstRunBetterButStill"]').css("display", "inline-block");
+      button.removeClass("toggled1");
+      button.removeClass("toggled3");
+      button.addClass("toggled2");
+      break;
     case 3:
-        uDom('span[data-i18n="adnFirstRunLetsGo"]').css("display", "inline-block");
-        button.removeClass("toggled2");
-        button.addClass("toggled3");
-        break;
+      uDom('span[data-i18n="adnFirstRunLetsGo"]').css("display", "inline-block");
+      button.removeClass("toggled2");
+      button.addClass("toggled3");
+      break;
 
     }
   }
@@ -151,21 +149,21 @@
       uNode.prop('checked', details[uNode.attr('data-setting-name')] === true)
         .on('change', function () {
 
-            if (this.getAttribute('data-setting-name') === "respectDNT") {
-              changeDNTexceptions(this.checked);
-            } else {
-              changeUserSettings(
-                this.getAttribute('data-setting-name'),
-                this.checked
-              );
-            }
+          if (this.getAttribute('data-setting-name') === "respectDNT") {
+            changeDNTexceptions(this.checked);
+          } else {
+            changeUserSettings(
+              this.getAttribute('data-setting-name'),
+              this.checked
+            );
+          }
 
-            if (!hideOrClick()) {
-              changeDNTexceptions(false);
-            }
+          if (!hideOrClick()) {
+            changeDNTexceptions(false);
+          }
 
-            toggleFirstRunButton();
-            toggleDNTException();
+          toggleFirstRunButton();
+          toggleDNTException();
 
         });
     });
@@ -175,12 +173,12 @@
         .on('change', onInputChanged);
     });
 
-    uDom(document).on('click', 'p[data-i18n="adnFirstRunHideAllAdsDescription"] span, p[data-i18n="adnFirstRunClickingAdsDescription"] span', function() {
-        openPage('/dashboard.html#3p-filters.html');
+    uDom(document).on('click', 'p[data-i18n="adnFirstRunHideAllAdsDescription"] span, p[data-i18n="adnFirstRunClickingAdsDescription"] span', function () {
+      openPage('/dashboard.html#3p-filters.html');
     });
 
-    uDom(document).on('click', 'p[data-i18n="adnFirstRunBlockingMalwareDescription"] span',function (e) {
-       openPage('/dashboard.html#options.html');
+    uDom(document).on('click', 'p[data-i18n="adnFirstRunBlockingMalwareDescription"] span', function (e) {
+      openPage('/dashboard.html#options.html');
     });
 
     uDom('#confirm-close').on('click', function (e) {
@@ -204,16 +202,17 @@
     }, onUserSettingsReceived);
 
     messager.send('adnauseam', {
-      what: 'verifyAdBlockers' },
-        function() {
-          vAPI.messaging.send(
-              'adnauseam', {
-                  what: 'getNotifications'
-              },
-              function(n) {
-                  renderNotifications(n, "firstrun");
-              });
-        });
+        what: 'verifyAdBlockers'
+      },
+      function () {
+        vAPI.messaging.send(
+          'adnauseam', {
+            what: 'getNotifications'
+          },
+          function (n) {
+            renderNotifications(n, "firstrun");
+          });
+      });
   });
 
   /******************************************************************************/
