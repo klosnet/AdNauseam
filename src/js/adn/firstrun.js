@@ -162,7 +162,7 @@
             changeDNTexceptions(false);
           }
 
-          toggleFirstRunButton();
+          // toggleFirstRunButton();
           toggleDNTException();
 
         });
