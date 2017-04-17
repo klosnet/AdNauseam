@@ -1741,8 +1741,10 @@
 
     vAPI.getAddonInfo(function (UBlockConflict, AdBlockConflict) {
 
-      if(UBlockConflict || AdBlockConflict) modified = addNotification(notes, AdBlockerEnabled);
-      else modified = removeNotification(notes, AdBlockerEnabled);
+      if (UBlockConflict || AdBlockConflict)
+        modified = addNotification(notes, AdBlockerEnabled);
+      else
+       modified = removeNotification(notes, AdBlockerEnabled);
 
       modified && sendNotifications(notes);
     });
@@ -1758,7 +1760,7 @@
 
     verifySetting(HidingDisabled, !µb.userSettings.hidingAds);
     verifySetting(ClickingDisabled, !µb.userSettings.clickingAds);
-    verifySetting(BlockingDisabled, !µb.userSettings.blockingMalware);
+    //verifySetting(BlockingDisabled, !µb.userSettings.blockingMalware); // chrome-store
   };
 
   var verifyLists = exports.verifyLists = function () {
