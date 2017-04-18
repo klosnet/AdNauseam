@@ -182,11 +182,11 @@
     });
 
     uDom('#confirm-close').on('click', function (e) {
-      if (hasEnabledToggle()) {
+
         e.preventDefault();
         // handles #371
         window.open(location, '_self').close();
-      }
+ 
     });
 
     uDom('#app-version').text(details.appVersion);
