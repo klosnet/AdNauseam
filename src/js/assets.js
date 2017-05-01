@@ -575,7 +575,7 @@ var assetCacheWrite = function(assetKey, details, callback) {
     getAssetCacheRegistry(onReady);
 };
 
-// var assetCacheRemove = function(pattern, callback) {
+var assetCacheRemove = function(pattern, callback) {
     var onReady = function() {
         var cacheDict = assetCacheRegistry,
             removedEntries = [],
@@ -710,10 +710,9 @@ var saveUserAsset = function(assetKey, content, callback) {
     // TODO(seamless migration):
     // This is for forward compatibility. Only for a limited time. Remove when
     // everybody moved to 1.11.0 and beyond.
-    //     if ( assetKey === µBlock.userFiltersPath ) {
+    if ( assetKey === µBlock.userFiltersPath ) {
         bin['assets/user/filters.txt'] = content;
     }
-    // <<<<<<<<
     var onSaved = function() {
         if ( callback instanceof Function ) {
             callback({ assetKey: assetKey, content: content });
