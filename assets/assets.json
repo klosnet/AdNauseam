@@ -157,8 +157,8 @@
 		"contentURL": [
 			"https://mirror.cedia.org.ec/malwaredomains/justdomains",
 			"https://mirror1.malwaredomains.com/files/justdomains",
-			"assets/thirdparties/mirror1.malwaredomains.com/files/justdomains",
-			"assets/thirdparties/mirror1.malwaredomains.com/files/justdomains.txt"
+			"assets/thirdparties/mirror1.malwaredomains.com/files/justdomains.txt",
+			"assets/thirdparties/mirror1.malwaredomains.com/files/justdomains"
 		],
 		"supportURL": "http://www.malwaredomains.com/"
 	},
