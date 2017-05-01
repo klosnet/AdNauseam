@@ -85,15 +85,19 @@ iframe {
         position: relative;
         }
     #dashboard-nav-widgets {
-        padding: 0;
+        padding: 1px 0 0 0;
+        white-space: normal;
         }
     [data-i18n="extName"] {
         display: none;
         }
     .tabButton {
         border-radius: 0;
-        border-top: 0;
-        display: block;
+        display: inline-block;
+        font-size: 100%;
+        margin-bottom: 1px;
+        margin-right: 1px;
+        top: 0;
         }
     .tabButton.selected {
         border-bottom: 1px solid #ccc;
