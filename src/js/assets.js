@@ -96,6 +96,12 @@ api.fetchText = function(url, onLoad, onError) {
             return onError.call(null, details);
         }
         details.content = this.responseText;
+
+        // ADN: If we've loaded a DNT list, we need to parse it
+        if (µBlock.adnauseam.dnt.isDoNotTrackUrl(url)) {
+            µBlock.adnauseam.dnt.processEntries(this.responseText);
+        }
+
         return onLoad.call(null, details);
     };
 
@@ -776,6 +782,7 @@ api.get = function(assetKey, options, callback) {
                 url: contentURL
             });
         }
+
         reportBack(details.content);
     };
 
