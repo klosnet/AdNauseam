@@ -1,5 +1,5 @@
 <!-- [![Build Status](https://travis-ci.org/dhowe/AdNauseam.svg)](https://travis-ci.org/dhowe/AdNauseam) -->
-<a href="http://www.gnu.org/licenses/gpl-3.0.en.html"><img src="https://img.shields.io/badge/license-GPL-orange.svg" alt="gpl license"></a> 
+<a href="http://www.gnu.org/licenses/gpl-3.0.en.html"><img src="https://img.shields.io/badge/license-GPL-orange.svg" alt="gpl license"></a>
 
 Install [AdNauseam](http://adnauseam.io) for [Firefox](https://addons.mozilla.org/en-US/firefox/addon/adnauseam), [Opera](https://addons.opera.com/en/extensions/details/adnauseam-2) or [Chrome](https://github.com/dhowe/AdNauseam/wiki/Install-AdNauseam-on-Chrome-Without-Google's-Permission)...
 
@@ -17,13 +17,7 @@ We conceptualize AdNauseam within a broader class of software systems that serve
 #### About the project
 --------
 
-* Web Site:         http://adnauseam.io
-* Authors:          [Daniel C. Howe](http://rednoise.org/daniel), [Helen Nissenbaum](https://www.nyu.edu/projects/nissenbaum/) & [Mushon Zer-Aviv](http://mushon.com)
-* Developers:       [Sally Chen](https://github.com/cqx931), [Leon Eckert](https://github.com/leoneckert), [Cyrus Suen](https://github.com/CyrusSUEN)
-* License:          GPLv3 (see included [LICENSE.txt](https://github.com/dhowe/AdNauseam/blob/master/LICENSE.txt) file for full license)
-* Github Repo:      https://github.com/dhowe/adnauseam/
-* Bug Tracker:      https://github.com/dhowe/adnauseam/issues
-* FAQ:              https://github.com/dhowe/adnauseam/wiki/FAQ
+**Important:** Chromium-based browsers do not relay [websocket connections](https://en.wikipedia.org/wiki/WebSocket) to the extension API. This means websites can use websocket connections to bypass uBO (or any other blocker). This can be remediated by installing uBO's companion extension [uBO-Extra](https://github.com/gorhill/uBO-Extra).
 
 
 #### Can I contribute?
@@ -84,4 +78,3 @@ Or, support us with a monthly donation and [become a backer!](https://opencollec
 <a href="https://opencollective.com/adnauseam/backer/27/website" target="_blank"><img src="https://opencollective.com/adnauseam/backer/27/avatar.svg"></a>
 <a href="https://opencollective.com/adnauseam/backer/28/website" target="_blank"><img src="https://opencollective.com/adnauseam/backer/28/avatar.svg"></a>
 <a href="https://opencollective.com/adnauseam/backer/29/website" target="_blank"><img src="https://opencollective.com/adnauseam/backer/29/avatar.svg"></a>
-
