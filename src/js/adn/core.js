@@ -1434,9 +1434,11 @@
       log("[LOAD] Compiled " + keys.length +
         " 3rd-party lists in " + (+new Date() - profiler) + "ms");
       listsLoaded = true;
+
       verifyAdBlockers();
       verifySettings();
       verifyLists();
+
       µb.adnauseam.dnt.updateFilters();
     });
 
