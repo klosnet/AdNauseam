@@ -187,8 +187,15 @@
     uDom('#confirm-close').on('click', function (e) {
       if (hasEnabledToggle()) {
         e.preventDefault();
+        console.log('close clicked');
         // handles #371
-        window.open(location, '_self').close();
+        //window.open(location, '_self').close();
+        /*messager.send('adnauseam', {
+          what: 'closeExtPage',
+          page: 'firstrun.html'
+        }, function(n) {
+          console.log('closeExtPage done', n);
+        }*/
       }
     });
 

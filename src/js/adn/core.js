@@ -782,12 +782,6 @@
     }
   }
 
-  var closeExtPage = function (htmlPage) {
-
-    var tabId = getExtPageTabId(htmlPage)
-    tabId && vAPI.tabs.remove(tabId, true);
-  }
-
   var reloadExtPage = function (htmlPage) {
 
     var tabId = getExtPageTabId(htmlPage)
@@ -1972,6 +1966,12 @@
 
     return jsonData;
   };
+
+  exports.closeExtPage = function (request) {
+
+    var tabId = getExtPageTabId(request.page);
+    tabId && vAPI.tabs.remove(tabId, true);
+  }
 
   exports.adsForPage = function (request, pageStore, tabId) {
 
