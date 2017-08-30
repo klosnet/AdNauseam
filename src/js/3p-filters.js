@@ -234,7 +234,7 @@ var renderFilterLists = function(soft) {
             var button = document.getElementById("buttonUpdateAdNauseam");
             li.appendChild(button);
         }
-        
+
         return li;
     };
 
@@ -253,7 +253,7 @@ var renderFilterLists = function(soft) {
     var liFromListGroup = function(groupKey, listKeys) {
 
 
-      
+
       var liGroup = document.querySelector('#lists > .groupEntry[data-groupkey="' + groupKey + '"]');
 
        // ADN: change some group key names
@@ -411,7 +411,10 @@ var renderFilterLists = function(soft) {
 
 var renderWidgets = function() {
     uDom('#buttonApply').toggleClass('disabled', filteringSettingsHash === hashFromCurrentFromSettings());
-    uDom('#buttonPurgeAll').toggleClass('disabled', document.querySelector('#lists .listEntry.cached') === null);
+    uDom('#buttonPurgeAll').toggleClass(
+        'disabled',
+        document.querySelector('#lists .listEntry.cached:not(.obsolete)') === null
+    );
     uDom('#buttonUpdate').toggleClass('disabled', document.querySelector('body:not(.updating) #lists .listEntry.obsolete input[type="checkbox"]:checked') === null);
     uDom('#buttonUpdateAdNauseam').toggleClass('disabled', document.querySelector('body:not(.updating) #lists .groupEntry:first-child .listEntry:first-child span.cache').offsetWidth > 0);
 
