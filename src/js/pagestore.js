@@ -632,8 +632,11 @@ PageStore.prototype.filterRequest = function(context) {
 
     // Dynamic URL filtering.
     µb.sessionURLFiltering.evaluateZ(context.rootHostname, context.requestURL, requestType);
-    var result = µb.sessionURLFiltering.toFilterString();
-    if (result !== '') console.log('[WARN] sessionURLFiltering hit!', context, result); // ADN
+    var result = µb.sessionURLFiltering.evaluateZ(context.rootHostname, context.requestURL, requestType);
+    if ( result !== 0 && µb.logger.isEnabled() ) {
+        this.logData = µb.sessionURLFiltering.toLogData();
+        console.log('[WARN] sessionURLFiltering hit!', context, result); // ADN
+    }
 
 
     // ADN: now check our firewall (top precedence)
@@ -648,9 +651,10 @@ PageStore.prototype.filterRequest = function(context) {
     }
 
     // Static filtering: lowest filtering precedence.
-    if ( result === '' || result.charCodeAt(1) === 110 /* 'n' */ ) {
-        if ( µb.staticNetFilteringEngine.matchString(context) !== undefined ) {
-            result = µb.staticNetFilteringEngine.toResultString(µb.logger.isEnabled());
+    if ( result === 0 || result === 3 ) {
+        result = µb.staticNetFilteringEngine.matchString(context);
+        if ( result !== 0 && µb.logger.isEnabled() ) {
+            this.logData = µb.staticNetFilteringEngine.toLogData();
 
             if (result.length && µb.adnauseam.mustAllowRequest(result, context)) {
                 result = ''; // ADN: cannot block
@@ -747,9 +751,10 @@ PageStore.prototype.filterRequestNoCache = function(context) {
     }
 
     // Static filtering has lowest precedence.
-    if ( result === '' || result.charCodeAt(1) === 110 /* 'n' */ ) {
-        if ( µb.staticNetFilteringEngine.matchString(context) !== undefined ) {
-            result = µb.staticNetFilteringEngine.toResultString(µb.logger.isEnabled());
+ if ( result === 0 || result === 3 ) {
+        result = µb.staticNetFilteringEngine.matchString(context);
+        if ( result !== 0 && µb.logger.isEnabled() ) {
+            this.logData = µb.staticNetFilteringEngine.toLogData();
 
             if ( µb.adnauseam.mustAllowRequest(result, context)) {
                 // console.warn("*** Blocking filterRequestNoCache ***"); //
